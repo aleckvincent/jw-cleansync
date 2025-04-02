@@ -25,17 +25,20 @@ class Assignment
     private ?Volunteer $volunteer = null;
 
     #[ORM\Column]
+    #[Groups(['assignment:write', 'assignment:read', 'team:red'])]
     private ?bool $confirmed = false;
 
     #[ORM\Column(length: 3, nullable: true)]
+    #[Groups(['assignment:write', 'assignment:read', 'team:red'])]
     private ?string $day = null;
 
     #[ORM\Column(length: 64, nullable: true)]
+    #[Groups(['assignment:write', 'assignment:read', 'team:red'])]
     private ?string $activity = null;
 
     #[ORM\ManyToOne(inversedBy: 'assignments')]
     #[ORM\JoinColumn(nullable: false)]
-    #[Groups(['assignment:write'])]
+    #[Groups(['assignment:write', 'assignment:read'])]
     private ?Team $team = null;
 
     public function getId(): ?int
