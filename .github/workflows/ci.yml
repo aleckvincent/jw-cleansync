@@ -10,6 +10,10 @@ jobs:
   tests:
     name: Run Tests & Coverage
     runs-on: ubuntu-latest
+    env:
+      APP_ENV: test
+      APP_SECRET: ${{ secrets.APP_SECRET }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
     services:
       mysql:
@@ -39,9 +43,6 @@ jobs:
 
       - name: Install dependencies
         run: composer install --prefer-dist --no-progress --no-suggest
-
-      - name: Set up .env.test
-        run: cp .env.test.github .env.test
 
       - name: Cache PHPUnit results
         uses: actions/cache@v3
