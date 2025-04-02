@@ -1,0 +1,88 @@
+name: CI - Tests & Security Check
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main, dev ]
+
+jobs:
+  tests:
+    name: Run Tests & Coverage
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: test_db
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install PHP & Extensions
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, intl, pdo_mysql, xdebug
+          coverage: xdebug
+          tools: composer, symfony
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress --no-suggest
+
+      - name: Set up .env.test
+        run: cp .env.test.github .env.test
+
+      - name: Cache PHPUnit results
+        uses: actions/cache@v3
+        with:
+          path: vendor
+          key: phpunit-${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
+          restore-keys: phpunit-${{ runner.os }}-
+
+      - name: Run database migrations
+        run: php bin/console doctrine:migrations:migrate --env=test --no-interaction
+
+      - name: Run PHPUnit Tests with Coverage
+        run: |
+          php bin/phpunit --coverage-clover coverage.xml
+          php bin/phpunit --coverage-text
+        env:
+          XDEBUG_MODE: coverage
+
+      - name: Upload coverage report to GitHub
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: true
+          verbose: true
+
+  security:
+    name: Run Security Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install PHP & Composer
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer, symfony
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress --no-suggest
+
+      - name: Run Symfony Security Checker
+        run: symfony security:check
